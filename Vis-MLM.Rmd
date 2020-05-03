@@ -1,0 +1,427 @@
+---
+title: "Visualizing Multivariate Linear Models in R"
+subtitle: "(1) The HE plot framework"
+author: "Michael Friendly"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    number_sections: false
+    toc: true
+    toc_depth: 3
+    theme: cerulean
+
+bibliography:
+  - "`r system('kpsewhich graphics.bib', intern=TRUE)`"
+  - "`r system('kpsewhich statistics.bib', intern=TRUE)`"
+  - "`r system('kpsewhich timeref.bib', intern=TRUE)`"
+---
+
+<!--
+  - "../../../localtexmf/bibtex/bib/graphics.bib"
+  - "../../../localtexmf/bibtex/bib/Rpackages.bib"
+  - "../../../localtexmf/bibtex/bib/statistics.bib"
+  - "../../../localtexmf/bibtex/bib/timeref.bib"
+-->
+
+  <!-- - "R-refs.bib" -->
+  <!-- - r-references.bib -->
+
+```{r setup, include=FALSE}
+# load packages
+ignore <- suppressMessages(library(heplots))
+ignore <- suppressMessages(library(candisc))
+ignore <- suppressMessages(library(car))
+#ignore <- suppressMessages(library(papaja))
+
+# knitr
+require(knitr, quietly=TRUE)
+opts_knit$set(aliases=c(h='fig.height', w='fig.width',
+                        cap='fig.cap', scap='fig.scap'),
+              eval.after = c('fig.cap','fig.scap'))
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,   # avoid warnings and messages in the output
+  message = FALSE,
+  fig.width = 4,
+  fig.height = 4,
+  tidy.opts=list(width.cutoff = 120),  # For code
+  options(width = 90)                  # for output
+  )
+```
+
+<!-- define some math macros -->
+$$
+\def\vec#1{\mathbf{#1}}
+\def\mat#1{\mathbf{#1}}
+\def\H{\mathbf{H}}
+\def\E{\mathbf{E}}
+\def\trans{^\mathsf{T}}  % transpose
+\def\period{\:\: .}
+\def\comma{\:\: ,}
+\def\inv#1{\mat{#1}^{-1}}
+\def\half#1{\mat{#1}^{-1/2}}
+$$
+
+### _Summary_
+
+This article describes and illustrates
+some graphical methods that we have developed over the last ten years that aid in the understanding and communication of the results of multivariate linear models [@Friendly:07:manova; @Friendly-etal:ellipses:2013].  These methods rely on _data ellipsoids_ as
+simple, minimally sufficient visualizations of variance that can be shown in 2D and 3D plots.
+As will be demonstrated, the Hypothesis-Error (HE) plot framework applies this idea to the results of multivariate tests of linear hypotheses.  
+
+Further, in the case where there are more than just a few outcome variables, the important
+nectar of their relationships to predictors can often be distilled
+in a multivariate juicer--- a projection of the multivariate relationships
+to the predictors in the low-D space that captures most
+of the flavor.  This idea can be applied using canonical correlation plots
+and with canonical discriminant HE plots.  
+The goal of this article is to provide a tutorial introduction to these methods and
+their implementation in the R pakages `heplots` and `candisc`.
+A longer version appears in @FriendlySigal:2016:TQMP.
+
+<!-- Overall, the goal of this paper is to provide a substantive and computational -->
+<!-- tutorial on how these ideas can be implemented (in \R software) and interpreted for popular designs: multivariate multiple regression analysis (MMRA), multivariate analysis of variance (MANOVA) and multivariate analysis of covariance (MANCOVA). Each are prevalent in psychological research applications, and we hope that this paper will aid researchers in properly interpreting and presenting their results.   -->
+
+## Introduction: Multivariate Linear Models
+
+Multivariate response data are very common in applied research, particularly in the social sciences.
+A given research outcome (e.g., depression, job satisfaction, academic achievement, etc.) may have several observed measurement scales or related aspects.
+
+In this framework, a primary goal of the researcher is to ascertain the impact of potential predictors on two or more response variables.
+For example, if academic achievement is measured for adolescents by their reading, mathematics, science, and history scores, do
+predictors such as parent encouragement, socioeconomic status and school environmental variables affect all of these outcomes?  Do they affect them in the _same_ or _different_ ways?
+Similarly, if psychiatric patients in various diagnostic categories are measured on a battery of tests related to
+social skills and cognitive functioning, we might want to know
+which measures best discriminate among the
+diagnostic groups and which are most predictive of positive outcomes. Further,
+how are the _relationships_ among the outcomes affected by the predictors?  
+
+Such questions obviously concern more than just the separate univariate relations of
+each response to the predictors.  Perhaps more important are questions of how the 
+outcome variables are predicted _jointly_. 
+
+<!-- Unfortunately, such data are frequently analyzed using univariate methods and visualizations. -->
+<!-- A univariate approach to such questions simply ignores the relationships among the outcomes. -->
+<!-- Statistical methods of ANOVA or multiple regression are applied to each response variable separately -->
+<!-- (sometimes applying some correction for multiple testing). Graphical methods in this approach frequently use boxplots for factors, or univariate effect plots [@Fox:03:effects]. -->
+
+Statistically, this is easy, because the classical univariate response model for ANOVA and regression,
+$\vec{y} = \mathbf{X} \vec{\beta} + \vec{u}$, with $\vec{u} \sim \mathcal{N} (0, \sigma^2 \mathbf{I})$
+generalizes directly to an analogous multivariate linear model (MLM), 
+$$\mathbf{Y} = \mathbf{X} \mathbf{B} + \mathbf{U}$$ 
+for multiple
+responses represented as columns of $\mathbf{Y} = [\vec{y_1}, \vec{y_2}, \dots , \vec{y_p}]$.
+Happily as well, hypothesis tests for the MLM are also straight-forward
+generalizations of the familiar $F$ and $t$-tests for univariate response models.
+
+However, with two or more response variables,
+ visualizations for multivariate  models are not as simple as they are for 
+their univariate counterparts for understanding the effects of predictors, model parameters, or model diagnostics.
+Consequently, the results of such studies are often explored and discussed solely in terms of coefficients and significance, and visualizations of the relationships are only provided for one response variable at a time,
+if at all. This tradition can mask important nuances, and lead researchers to draw erroneous conclusions.
+
+
+## The HE plot framework
+
+Hypothesis-Error (HE) plots provide a powerful and convienient way to visualize the effects of 
+one or more factors or quantitative predictors in 
+MANOVA, multivariate multiple regression and multivariate analysis of covariance designs.
+The essential ideas are most easily illustrated with the simplest case, a two-group design
+with two response variables.
+
+Imagine that two groups of school children are taught by different math teachers and tested
+for both basic math (BM) problems and solving word problems (WP).
+The scatterplot at the left shows the scores for six students in each group. 
+The figures below use the `mathscores` data set from the `heplots` package, with some details
+explained in the following section.
+
+The first essential idea is that for a multivariate sample, 
+a **data ellipse** (or **elipsoid** for >2 dimensions)
+is a _sufficient **visual** summary_ of the data, under classical assumptions of multivariate normality,
+in exactly the same way that the mean vector $\bar{\mathbf{y}}$ and sample variance-covariance matrix,
+$\mathbf{S}$ are a _sufficient **statistical** summary_.
+The `mathscore` data with overlaid data ellipses for each group are shown in the right panel.
+
+
+<!-- Doesn't work
+cap="Left: scatterplot of mathscore data; Right: Data ellipses for the two groups."
+-->
+
+```{r plot1, out.width = "40%", echo=FALSE, fig.show="hold", fig.align="center", fig.cap="Left: scatterplot of mathscore data; Right: Data ellipses for the two groups."}
+# two figs side by side
+include_graphics(c("fig/mathscore-data.png",
+                   "fig/mathscore-data-ellipses.png"))
+```
+
+### HE plots
+
+The next essential idea is that statistical tests for (M)ANOVA models are essentially asking the question: How large are the differences between groups, relative to differences within groups?
+Visually, this can be seen in the diagrams below.
+
+At the left, the data for the two groups are reduced to two data ellipses. The statistical question in both
+univariate and multivariate tests
+is 
+
+> how large the differences bewtween the means of group 1 and 2 on BM and WP are in relation to the variation within each of these groups.
+
+At the right is an HE plot for these data. Here,
+
+* the differences between group means are shown by what we call the **H** ellipsoid, the data ellipsoid
+of the fitted (predicted) values under the model.
+In 2D, with a one degree-of-freedom test, **H** has one dimension
+and appears as a line, whose orientation shows the differences between the means and whose size reflects the
+magnitude of group differences on both variables.
+
+* the variation within groups is reflected in the **E** ellispoid, which is just the data ellipsoid of the
+residuals from the model. In this plot, it appears as a pooled average of the two separate data ellipses of the groups, translated to the grand mean.
+
+
+```{r plot2, out.width = "40%", echo=FALSE, fig.show="hold", fig.align="center", fig.cap="Left: Data ellipses; Right: HE plot."}
+# two figs side by side
+include_graphics(c("fig/mathscore-ellipses.png",
+                   "fig/mathscore-he.png"))
+```
+
+Now here is where the magic of ellipsoids and multivariate statistics happens:
+First, the size of the **E** ellipsoid is set to some convenient coverage
+value; by default, we use `level=0.68`, corresponding to the analog of
+a univariate $\pm 1$ confidence interval.
+Then, in the HE plot, the size of the **H** ellipsoid can be scaled
+relative to that of the **E** ellipsoid in two different ways:
+
+* **Effect size scaling**: With effect scaling, the \mat{H} and \mat{E} sums of squares and products
+matrices are both divided by the error df, giving multivariate analogs of univariate
+measures of effect size, e.g., $(\bar{y}_1-\bar{y}_2) / s$.
+
+* **Significance scaling**: With significance scaling, the \mat{H} ellipse is further divided by
+$\lambda_\alpha$, the critical value of Roy's largest root statistic.
+This scaling has the property that an \mat{H} ellipse will protrude somewhere
+outside the \mat{E} ellipse \emph{iff} the
+multivariate test is significant at level $\alpha$. Wow! we have a visual test of significance.
+
+### Discriminant scores
+
+The next idea comes initially from discriminant analysis, a method that is formally similar
+to ANOVA and MANOVA, except that the emphasis in discriminant analysis is on finding
+weights for outcome variables that best predict or explain group membership. Using those weights
+one gets **discriminant** scores, defined to give the largest test statistics to distinguish
+among groups.
+
+```{r, out.width = "40%", echo=FALSE, fig.show="hold", fig.align="center", fig.cap="Left: Data ellipses; Right: Discriminant scores"}
+# two figs side by side
+include_graphics(c("fig/mathscore-data-ellipses.png",
+                   "fig/mathscore-overlay.png"))
+```
+
+In this simple example, it can be seen that the discriminant axis is just the line through the means of
+the two groups, and the discriminant scores are simply the projections of the observations on this axis.
+
+### Canonical space
+
+Now, imagine rotating the plot to a space where the weighted sums of the variables that best disciminate
+among groups form the coordinate azes.  In this simple example, there is only one discriminant axis,
+and, for two groups, a view of canonical space can be shown as 
+
+(a) a boxplot of the canonical scores for the two groups;
+(b) vectors showing the weights of the BM and WP variables on this dimension.
+
+```{r, out.width = "30%", echo=FALSE}
+# two figs side by side
+include_graphics(c("fig/mathscore-overlay.png",
+                   "fig/mathscore-can.png"))
+```
+
+Canonical views get considerably more interesting when there are more than one degree of freedom for a multivariate test.
+
+
+### Overall view
+
+These ideas are summarized in the diagram below. 
+
+* Data ellipses are sufficient visual summaries of means and covariances for two or more groups.
+* An HE plot summarizes the data for any tests of linear hypotheses in an **H** ellipse and
+and **E** ellipse. With significance scaling this provides visual tests of multivariate hypotheses.
+* Discriminant analysis provides scores--- weighted linear sums of the responsed that are optimally
+distinguished among groups.
+* Canonical space is a projection of the space of the response variables into a low-dimensional
+space that shows the largest differences among groups.
+
+
+```{r, echo=FALSE}
+include_graphics("fig/heplot-framework.png")
+```
+
+## Toy example
+
+The figures above use the `mathscore` data set from the `heplots` package. Here, we show some examples of code for
+analysis and plots of this simple data.
+
+```{r mathdata}
+data(mathscore, package="heplots")
+str(mathscore)
+```
+
+Scatterplots of the data with data ellipses and other convienent features are most easily created
+using `car::scatterplot`. 
+
+```{r mathscat, echo=-1, h=5, w=5}
+op <- par(mar=c(4,5,1,1)+.2)
+car::scatterplot(WP ~ BM | group, data=mathscore, 
+	ellipse=list(levels=0.68), smooth=FALSE,
+	xlab = "Basic math", ylab = "Word problems",
+	xlim = c(130, 210),
+	pch=c(15,16),
+	legend=list(coords = "topright"))
+```
+
+In this plot, showing the linear regression lines for each group, it is clear that the score on `WP` increases linearly with the score on `BM` for both groups, with approximately the same slopes.
+
+**Aside**: In a different context, one might want to consider Word problems the main outcome variable of interest
+and Basic math as a covariate. Then, an ANCOVA model could be fit as 
+`math.ancova <- lm(WP ~ BM + group, data=mathscore)`.
+
+
+### Analysis
+
+In this two-group design, the analysis is essentially that of a multivariate $t$-test, Hotelling's $T^2$.
+But it is simple to do this using `lm()` with a multivariate response, indicated in the model formula
+using `cbind(y1, y2, y3, ...) ~ group`.
+
+```{r mathmod}
+math.mod <- lm(cbind(BM, WP) ~ group, data=mathscore)
+car::Anova(math.mod)
+```
+In this case, the value of the $F$ statistic shown above in the `Anova()` output is identical to
+the Hotelling's $T^2$ statistic. But look at what happens if we do a univariate $F$ (or $t$) test on each outcome
+variable. The univariate test statistics are smaller than the equivalent $F$ for the multivariate test
+based on Hotelling's $T^2$. 
+
+```{r}
+Anova(lm(BM ~ group, data=mathscore))
+Anova(lm(WP ~ group, data=mathscore))
+```
+
+We might conclude from the univariate tests that `group` has a non-significant effect on Basic Math, but makes a significant different on Word Problems.  These give no information about how these two
+scores are related.
+
+The multivariate test can be readily seen from  HE plot. The more highly significant overall test for BM and WP can be seen in the relative size of the group effect ($\mat{H}$) relative to residuals ($\mat{E}$). 
+More importantly, the orientation of the $\mat{H}$ ellipsoid gives a simple interpretation of the results:
+
+Assuming that students in the two classes are otherwise identical, the HE plot shows a clear trade-off
+in performance. 
+
+* Students in group 1 do better than those in group 2 on Basic Math, but worse on Word Problems
+* Students in group 2 do better than those in group 1 on Word Problems, but worse on Basic Math
+
+
+
+```{r mathhe, echo=-1, w=5, h=5}
+op <- par(mar=c(4,5,1,1)+.2)
+heplot(math.mod, 
+       fill=TRUE, 
+       cex=1.5, cex.lab=1.5, 
+       xlab="Basic math", ylab="Word problems")
+```
+
+### What are **H** and **E**?
+
+In univariate response models, statistical hypothesis tests ($F$ tests) and model summaries
+(like $R^2$) are based on the familiar decomposition of the total sum of squares $SS_T$ into regression or hypothesis ($SS_H$) and error ($SS_E$) sums of squares. 
+
+\begin{align*}
+SS_{T} & = & SS_{H} & + & SS_{E} \\
+\sum_{i=1}^{g} \sum_{j=1}^{n_i} (y_{ij}-\bar{y}_{i.})^2 & = &
+      \sum_{i=1}^{g} (\bar{y}_{i.} - \bar{y}_{..})^2    & + &
+     \sum_{i=1}^{g} \sum_{j=1}^{n_i} (y_{ij} - \bar{y}_{i.} ) ^2   \period
+\end{align*}
+
+
+In  the multivariate linear model a similar decomposition is applied to the total _sum of squares and cross products_ 
+<!-- (\dfn{SSP}) -->
+matrix into hypothesis ($\mat{H}$) and residual ($\mat{E}$) SSP matrices. For the MLM this is expressed as,
+
+\begin{align*}
+\underset{(p\times p)}{\mathbf{SSP}_{T}}  
+   &  = \mat{Y}^{\prime} \mat{Y}-n\overline{\vec{y}}\,\overline{\vec{y}}^{\prime} \\
+   &   = \left(  \widehat {\mat{Y}}^{\prime}\widehat{\mat{Y}}-n\overline{\vec{y}}\,\overline{\vec{y}}^{\prime}\right) 
+      + \widehat{\mathbf{U}}^{\prime}\widehat{\mathbf{U}} \\
+   &  = \mat{SSP}_{H}+\mat{SSP}_{E} \equiv \mat{H} + \mat{E}      \comma
+\end{align*}
+
+where
+$\overline{\vec{y}}$ is the $(p\times 1)$ vector of means for the response variables; $\widehat{\mat{Y}} = \mat{X}\widehat{\mat{B}}$ is the matrix of fitted values; and $\widehat{\mathbf{U}} = \mat{Y} -\widehat{\mat{Y}}$ is the matrix of residuals.  
+
+The $\mat{H}$ and $\mat{E}$ matrices are calculated in the `car::Anova()` function and used in the statistical tests.
+
+```{r}
+math.aov <- Anova(math.mod)
+(H <- math.aov$SSP)
+(E <- math.aov$SSPE)
+```
+However, as noted above, $\mat{H}$ is just the sum of squares and crossproducts of the fitted values, corrected for the grand mean:
+
+```{r}
+fit <- fitted(math.mod)
+ybar <- colMeans(mathscore[,2:3])
+n <- nrow(mathscore)
+crossprod(fit) - n * outer(ybar, ybar)
+```
+
+$\mat{E}$ is just the sum of squares and crossproducts of the residuals,
+```{r}
+resids <- residuals(math.mod)
+crossprod(resids)
+```
+
+What does that mean visually? The $\mat{E}$ ellipse is the data ellipse you get when you subtract the group means from all observations, shifting them to the grand means. The function `heplots::covEllipses`
+is designed to show this.
+
+```{r covell, w=5, h=5}
+covEllipses(mathscore[,2:3], mathscore$group, 
+            pooled=TRUE, cex=2,
+            xlab="Basic math", ylab="Word problems",
+          	xlim=c(120,220),
+            fill = c(F, F, T),
+            asp=1,
+            cex.lab=1.5)
+```
+
+
+### Discriminant analysis 
+
+MANOVA and linear discriminant analysis (LDA) are intimately related and differ mainly in perspective.
+In MANOVA, the emphasis is on determining if the means on two or more response variables
+differ significantly.
+LDA uses the same statistical machinery, but the emphasis is on finding the weighted sums
+of the response variables which are best discriminated among groups. LDA can also be viewed
+as a **classification problem**:  Find the weights for the responses that best
+allows you to classify the observations.  In this context, prior probabilities for the two
+groups affect the boundary between classification as Group1 vs. Group 2.
+
+In both cases,
+
+* group differences are represented by the $\mat{H}$ matrix and the residuals
+$\mat{E}$ matrix;
+* test statistics are based on the eigenvalues of $\mat{H} \inv{E}$ (read: "$\mat{H}$ relative to $\mat{E}$")
+* the discriminant weights are the eigenvectors of $\mat{H} \inv{E}$
+
+As illustrated above, in the case of two groups, the discriminant axis is just the line joining the two group centroids, and the discriminant scores are just the projections of the observations on this
+line.  
+LDA can be carried out using `lda()` in the `MASS` package.
+
+```{r}
+mod.lda <- MASS::lda(group ~ ., mathscore)
+```
+
+The discriminant coefficients are:
+```{r}
+coef(mod.lda)
+```
+
+The discriminant scores are:
+```{r}
+predict(mod.lda)$x
+```
+
+
+## References
