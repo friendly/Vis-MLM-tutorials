@@ -45,7 +45,7 @@ knitr::opts_chunk$set(
   fig.width = 4,
   fig.height = 4,
   tidy.opts=list(width.cutoff = 120),  # For code
-  options(width = 90)                  # for output
+  options(width = 90, digits=5)        # for output
   )
 ```
 
@@ -153,6 +153,8 @@ include_graphics(c("fig/mathscore-data.png",
                    "fig/mathscore-data-ellipses.png"))
 ```
 
+The data ellipses clearly show the group means as well as the within-group scatter.
+
 ### HE plots
 
 The next essential idea is that statistical tests for (M)ANOVA models are essentially asking the question: How large are the differences between groups, relative to differences within groups?
@@ -219,13 +221,13 @@ the two groups, and the discriminant scores are simply the projections of the ob
 ### Canonical space
 
 Now, imagine rotating the plot to a space where the weighted sums of the variables that best disciminate
-among groups form the coordinate azes.  In this simple example, there is only one discriminant axis,
-and, for two groups, a view of canonical space can be shown as 
+among groups form the coordinate axes.  In this simple example, there is only one discriminant axis,
+and, for two groups, a view of canonical space can be shown as: 
 
 (a) a boxplot of the canonical scores for the two groups;
 (b) vectors showing the weights of the BM and WP variables on this dimension.
 
-```{r, out.width = "30%", echo=FALSE}
+```{r, out.width = "40%", echo=FALSE}
 # two figs side by side
 include_graphics(c("fig/mathscore-overlay.png",
                    "fig/mathscore-can.png"))
@@ -247,7 +249,7 @@ distinguished among groups.
 space that shows the largest differences among groups.
 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, out.width="80%"}
 include_graphics("fig/heplot-framework.png")
 ```
 
@@ -351,7 +353,9 @@ matrix into hypothesis ($\mat{H}$) and residual ($\mat{E}$) SSP matrices. For th
 where
 $\overline{\vec{y}}$ is the $(p\times 1)$ vector of means for the response variables; $\widehat{\mat{Y}} = \mat{X}\widehat{\mat{B}}$ is the matrix of fitted values; and $\widehat{\mathbf{U}} = \mat{Y} -\widehat{\mat{Y}}$ is the matrix of residuals.  
 
-The $\mat{H}$ and $\mat{E}$ matrices are calculated in the `car::Anova()` function and used in the statistical tests.
+The $\mat{H}$ and $\mat{E}$ matrices are calculated in the `car::Anova()` function and saved
+as the `SSP` and `SSPE` components of the 
+used in the statistical tests.
 
 ```{r}
 math.aov <- Anova(math.mod)
@@ -376,7 +380,8 @@ crossprod(resids)
 What does that mean visually? The $\mat{E}$ ellipse is the data ellipse you get when you subtract the group means from all observations, shifting them to the grand means. The function `heplots::covEllipses`
 is designed to show this.
 
-```{r covell, w=5, h=5}
+```{r covell, w=5, h=5, echo=-1}
+op <- par(mar=c(4,5,1,1)+.2)
 covEllipses(mathscore[,2:3], mathscore$group, 
             pooled=TRUE, cex=2,
             xlab="Basic math", ylab="Word problems",
@@ -385,7 +390,8 @@ covEllipses(mathscore[,2:3], mathscore$group,
             asp=1,
             cex.lab=1.5)
 ```
-
+The **pooled** ellipse is the data ellipse of deviations of the observations from the grand means,
+representing the $\mat{E}$ ellipse.
 
 ### Discriminant analysis 
 
@@ -406,22 +412,45 @@ $\mat{E}$ matrix;
 * the discriminant weights are the eigenvectors of $\mat{H} \inv{E}$
 
 As illustrated above, in the case of two groups, the discriminant axis is just the line joining the two group centroids, and the discriminant scores are just the projections of the observations on this
-line.  
-LDA can be carried out using `lda()` in the `MASS` package.
+line.  LDA can be carried out using `lda()` in the `MASS` package.
 
 ```{r}
 mod.lda <- MASS::lda(group ~ ., mathscore)
 ```
 
-The discriminant coefficients are:
+The discriminant coefficients are given by the `coef()` method for `lda` objects.
 ```{r}
 coef(mod.lda)
 ```
 
-The discriminant scores are:
+The discriminant scores are given by the `x` component of the `predict()` method for `lda` objects.
 ```{r}
 predict(mod.lda)$x
 ```
+
+In this case, these are the same results given by the canonical analysis using the `candisc` package.
+
+```{r}
+library(candisc)
+mod.can <- candisc(math.mod)
+```
+
+The main difference difference is that the variable weights are called the `structure` component
+of the `candisc` objects, and the observation scores are called `scores`.
+
+```{r}
+mod.can$structure
+mod.can$scores
+```
+
+The plot method we use for 1D `candisc` objects deserves a bit of an explaination. In two or three dimensions, the most useful plots show something of the scores for observations on the canonical
+dimension, together with the weights or contributions of the response variables.
+
+```{r}
+plot(mod.can, var.lwd=3)
+```
+
+The plot above show a boxplot of the canonical scores for the two groups. The arrows in the structure show the relative size and direction of the coefficients (weights) for the Basic Math and Word Problems scores.
 
 
 ## References

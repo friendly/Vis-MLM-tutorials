@@ -86,6 +86,9 @@ library(candisc)
 mod.can <- candisc(math.mod)
 mod.can
 
+mod.can$structure
+mod.can$scores
+
 plot(mod.can, var.lwd=3)
 
 # t-test of canonical scores.
