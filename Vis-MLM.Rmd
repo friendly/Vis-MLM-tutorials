@@ -450,7 +450,7 @@ dimension, together with the weights or contributions of the response variables.
 plot(mod.can, var.lwd=3)
 ```
 
-The plot above show a boxplot of the canonical scores for the two groups. The arrows in the structure show the relative size and direction of the coefficients (weights) for the Basic Math and Word Problems scores.
+The plot above show a boxplot of the canonical scores for the two groups. The arrows in the structure show the relative size and direction of the coefficients (weights) for the Basic Math and Word Problems scores. The canonical dimension is `Can1 = 0.77 WP - 0.59 BM`, a contrast between the two kinds of tests.
 
 
 ## References
