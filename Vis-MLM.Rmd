@@ -61,6 +61,12 @@ $$
 \def\inv#1{\mat{#1}^{-1}}
 \def\half#1{\mat{#1}^{-1/2}}
 $$
+[Document produced using: 
+`heplots` version `r packageDescription("heplots")[["Version"]]` ,
+`candisc` version `r packageDescription("candisc")[["Version"]]` ,
+`car`     version `r packageDescription("car")[["Version"]]` 
+]
+
 
 ### _Summary_
 
@@ -390,6 +396,7 @@ covEllipses(mathscore[,2:3], mathscore$group,
             asp=1,
             cex.lab=1.5)
 ```
+
 The **pooled** ellipse is the data ellipse of deviations of the observations from the grand means,
 representing the $\mat{E}$ ellipse.
 
@@ -430,7 +437,7 @@ predict(mod.lda)$x
 
 In this case, these are the same results given by the canonical analysis using the `candisc` package.
 
-```{r}
+```{r mod-can1}
 library(candisc)
 mod.can <- candisc(math.mod)
 ```
@@ -438,7 +445,7 @@ mod.can <- candisc(math.mod)
 The main difference difference is that the variable weights are called the `structure` component
 of the `candisc` objects, and the observation scores are called `scores`.
 
-```{r}
+```{r mod-can2}
 mod.can$structure
 mod.can$scores
 ```
@@ -446,8 +453,8 @@ mod.can$scores
 The plot method we use for 1D `candisc` objects deserves a bit of an explaination. In two or three dimensions, the most useful plots show something of the scores for observations on the canonical
 dimension, together with the weights or contributions of the response variables.
 
-```{r}
-plot(mod.can, var.lwd=3)
+```{r mod-can3, out.width="60%"}
+plot(mod.can, var.lwd=3, points.1d=TRUE)
 ```
 
 The plot above show a boxplot of the canonical scores for the two groups. The arrows in the structure show the relative size and direction of the coefficients (weights) for the Basic Math and Word Problems scores. The canonical dimension is `Can1 = 0.77 WP - 0.59 BM`, a contrast between the two kinds of tests.
