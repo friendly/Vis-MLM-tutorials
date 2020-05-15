@@ -1,0 +1,254 @@
+---
+title: "Visualizing Multivariate Linear Models in R"
+subtitle: "Iris data examples"
+author: "Michael Friendly"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    number_sections: false
+    toc: true
+    toc_depth: 3
+    theme: cerulean
+
+bibliography:
+  - "`r system('kpsewhich graphics.bib', intern=TRUE)`"
+  - "`r system('kpsewhich statistics.bib', intern=TRUE)`"
+  - "`r system('kpsewhich timeref.bib', intern=TRUE)`"
+  - "`r system('kpsewhich Rpackages.bib', intern=TRUE)`"
+---
+
+
+  <!-- - "R-refs.bib" -->
+  <!-- - r-references.bib -->
+
+```{r setup, include=FALSE}
+# load packages
+ignore <- suppressMessages(library(heplots))
+ignore <- suppressMessages(library(candisc))
+ignore <- suppressMessages(library(car))
+#ignore <- suppressMessages(library(papaja))
+
+# knitr
+require(knitr, quietly=TRUE)
+opts_knit$set(aliases=c(h='fig.height', w='fig.width',
+                        cap='fig.cap', scap='fig.scap'),
+              eval.after = c('fig.cap','fig.scap'))
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,   # avoid warnings and messages in the output
+  message = FALSE,
+  fig.width = 4,
+  fig.height = 4,
+  tidy.opts=list(width.cutoff = 120),  # For code
+  options(width = 90, digits=5),        # for output
+  options(show.signif.stars=FALSE, scipen=1)
+  )
+```
+
+<!-- define some math macros -->
+$$
+\def\vec#1{\mathbf{#1}}
+\def\mat#1{\mathbf{#1}}
+\def\H{\mathbf{H}}
+\def\E{\mathbf{E}}
+\def\trans{^\mathsf{T}}  % transpose
+\def\period{\:\: .}
+\def\comma{\:\: ,}
+\def\inv#1{\mat{#1}^{-1}}
+\def\half#1{\mat{#1}^{-1/2}}
+$$
+
+### _Summary_
+
+This article illustrates
+some graphical methods that we have developed over the last ten years that aid in the understanding and communication of the results of multivariate linear models [@Friendly:07:manova; @Friendly-etal:ellipses:2013].
+Just as a boxplot is a visual summary of the mean and variance of a 1D sample,
+these methods rely on _data ellipsoids_ as
+simple, minimally sufficient visualizations of means and (co-)variance that can be shown in 2D and 3D plots.
+
+I don't describe the theory behind these methods here. Instead, I illustrate the use of the R packages
+`car`, `heplots`, and `candisc` applied to a classic data set often used as examples of
+ultivariate analysis of variance (MANOVA), discriminant analysis and principal component analysis.
+More details and a wide range of examples are given in @FriendlySigal:2016:TQMP.
+
+## Iris data
+
+Imagine you are a plant biologist and have measurements on four different characteristics of 
+different species of a kind of flower.  Can you devise a rule or test to distinguish one species
+from another?  If so, what are the weights for the variables that best distinguish among the species?
+These were the problems that Edgar Anderson [@Anderson:35] faced in 1935 when he collected
+data on three species of iris flowers found on the Gaspe Penninsula of Quebec, Canada.
+The species are "Setosa", "Versicolor", and "Virginica", and he carefully measured the length
+and width of two parts of each specimen: the flower petals and sepals (the green  leaves that
+enclose the flower).
+
+The iris dataset became famous in the history of statistics because it was shortly used by R. A. Fisher [@Fisher:36]
+to introduce the method of **discriminant analysis**, which answered Anderson's questions. 
+Implicit here was the more basic question:  Are the differences in the means for the species
+large enough (relative to with-species variability) to conclude that they differ significantly
+on this collection of measurements? This is the question now addressed under the topic of
+Multivariate Analysis of Variance (MANOVA).
+
+<!--
+\begin{figure*}
+\centering
+\begin{tabular}{ccc}
+\includegraphics[width=.25\textwidth]{fig/iris-setosa} &
+\includegraphics[width=.25\textwidth]{fig/iris-versicolor} &
+\includegraphics[width=.25\textwidth]{fig/iris-virginica}
+\end{tabular}
+\caption{Three species of irises in the Anderson/Fisher data set: setosa (left), versicolor (center), and virginica (right). {\footnotesize \emph{Source}: The photographs are respectively by Radomil Binek, Danielle Langlois, and Frank Mayfield, and are distributed under the Creative Commons Attribution-Share Alike 3.0 Unported license (first and second images) or 2.0 Creative Commons Attribution-Share Alike Generic license (third image); they were obtained from the Wikimedia Commons.}}\label{fig-iris-photos}
+\end{figure*}
+-->
+
+```{r plot1, out.width = "30%", echo=FALSE, fig.show="hold", fig.align="center", fig.cap="Three species of irises in the Anderson/Fisher data set: setosa (left), versicolor (center), and virginica (right)."}
+# two figs side by side
+include_graphics(c("fig/iris-setosa.jpg",
+                   "fig/iris-versicolor.jpg",
+                   "fig/iris-virginica.jpg"))
+```
+
+
+<!-- ![setosa](fig/iris-setosa.jpg){ width=30% }      ![versicolor](fig/iris-versicolor.jpg){ width=30% }    ![virginica](fig/iris-virginica.jpg){ width=30% } -->
+<!-- Three species of irises in the Anderson/Fisher data set: setosa (left), versicolor (center), and virginica (right). -->
+
+
+### Exploratory plots
+
+For such a dataset, perhaps the easiest thing to do is to do univariate plots (boxplots),
+bivariate plots (scatterplot matrix) and analyses
+(anova) for each response variable separately.  This gives some information, but usually
+not comprehensive enough to understand the multivariate response variables: how they are
+related and how they differ in distinguishing among groups.  
+
+First, define nice colors to distinguish the iris species.  We use the equivalent of the default
+colors for a factor in `ggplot2` (based on equally spaced hues around the color wheel, starting from 15).
+```{r gg-color}
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
+(col <- gg_color_hue(3))
+```
+
+We use the `car::Boxplot` function to show the distributions of the iris size measurements, with a separate
+panel for each measure.  All the measures are in cm., but it is more useful to see them plotted on
+separate scales to compare the specied on each size variable. From this, we can see that the means for the species
+are ordered, `setosa < versicolor < virginica` on all variables except for `Sepal.Width`.
+```{r boxplots, w=12, h=4, out.width="100%", collapse=TRUE}
+op <- par(mfrow=c(1, 4))
+for (response in names(iris)[1:4]){
+  Boxplot(iris[, response] ~ Species, data=iris,
+          ylab=NULL,
+          axes=FALSE,
+          col=col,
+          main = response,
+          cex.lab = 1.5)
+  box()
+  axis(2)
+  axis(1, at=1:3, labels=c("setosa", "vers.", "virginica"))
+}
+par(op)
+```
+
+A scatterplot matrix shows all pairwise scatterplots. The base R function is `pairs`, but
+`car::scatterplotMatrix` provides data ellipses for each group as well as other simple 
+enhancements. 
+Again, we note that the pattern
+of group means is different for `Sepal.Width` than for the other variables.
+```{r spm-iris, h=7, w=7, out.width="80%", fig.align="center"}
+scatterplotMatrix(~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width | Species,
+                  data=iris, 
+                  smooth=FALSE, regLine=FALSE,
+                  ellipse = list(levels=0.68, 
+                                 fill=TRUE, 
+                                 fill.alpha=0.2),
+                  by.groups = TRUE,
+                  diagonal = FALSE,
+                  label.pos = 0.5,
+                  col = col,
+                  pch = 15:17,
+                  cex = 0.9,
+                  legend = list(coords="bottomleft", 
+                                cex=2, 
+                                title="Species")
+                  )
+
+```
+The data ellipses show something new: The bivariate scatter --- variances and covariances
+(correlations) also differ among species.  Generally, the variances of Setosa are smaller than the other two
+species, and the within-group correlations seem different for Setosa.
+
+## MANOVA
+
+What we cannot see from these univariate or bivariate views is how the size variables contribute to
+distinguishing among the species and how they relate collectively to an overall MANOVA test.
+
+A standard MANOVA would use the `lm()` function, where the left side (`Y`), of the model formula,
+`Y ~ X` comprises a **matrix** of response variables, and the right side (`X`) is specified exactly
+as in model formulae for univariate problems. 
+
+```{r}
+iris.mod <- lm(cbind(Sepal.Length, Sepal.Width, Petal.Length, Petal.Width) ~
+               Species, data=iris)
+Anova(iris.mod)
+```
+
+
+In this case, the evidence for significant differences among the means of the iris species is overwhelming, but even in such a clear case it is hard to specify **exactly* what that amounts to.
+HE plots give a visual summary of the relations of response variables and how they contribute
+to tests of group differences.
+
+## HE plots
+
+The idea of the HE plot is to take a bivariate or multivariate view of this problem and focus
+visual attention on the important aspects:
+
+* the variability **between** groups (summarized in a $\mat{H}$ ellipse, or ellipsoid in > 2D)
+* the residual variability **within** groups (summarized in a $\mat{E}$ ellipse)
+
+To illustrate this, the figure below shows a scatterplot of the data for the relationship
+between sepal width and sepal length next to the analogous HE plot.
+
+```{r, fig.show='hold', h=7, w=7,  out.width="50%"}
+# (a) Scatterplot with data ellipses
+car::scatterplot(Sepal.Width ~ Sepal.Length | Species, data=iris,
+                 smooth=FALSE, regLine=FALSE,
+                 ellipse = list(levels=0.68, fill=TRUE, fill.alpha=0.2),
+                 legend = list(coords="topright", cex=1.2, title="Species"),
+                 col = col, pch=15:17, grid=FALSE,
+                 xlim=c(2,9), ylim=c(1,5)
+                )
+# (b) HE plot
+heplot(iris.mod, fill=c(TRUE, FALSE))
+
+```
+
+In the HE plot at the right,
+
+* the differences between species means are shown by what we call the $\mat{H}$ ellipsoid, the data ellipsoid
+of the fitted (predicted) values under the model.
+In 2D, with a two degree-of-freedom test, $\mat{H}$ has two dimensions
+and appears as a simple ellipse.
+
+* the variation within groups is reflected in the $\mat{E}$ ellipse, which is just 
+the pooled data ellipses of the groups, translated to the grand means. By default, the size of the ellipse is set to cover 68% of the observations in a bivariate normal sample, an analog of a $\bar{y} \pm 1 s$ univariate
+interval. With this 68% interval, you can "read" the residual standard deviation as the half-length of the shadow of the $\mat{E}$ ellipse on any axis.
+Translating this ellipse to the grand means allows us to show the group centroids on the same scale,
+facilitating interpretation.
+
+<!-- More precisely, the $\mat{E}$ ellipse is the data ellipse of the residuals -->
+
+The orientation of the $\mat{H}$ ellipse reflects the negative correlation of the species means:
+in general species with larger sepal length have smaller sepal width. 
+
+But the overall size of the $\mat{H}$ ellipse relative to that of $\mat{E}$ is crucial:
+The default used in `heplot` is what we call "significance" or "evidence" scaling.
+That is the relative size of the $\mat{H}$ ellipse is set so that in the full p-dimensional
+space of all $p$ response variables, the $\mat{H}$ ellipse will protrude somewhere
+outside the $\mat{E}$ ellipse *if and only if* the test for some effect is significant
+at a prescribed $\alpha$-level (0.05 by default). 
+
+
+## References

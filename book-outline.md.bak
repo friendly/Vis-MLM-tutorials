@@ -28,7 +28,6 @@
 
 ## MANOVA Examples
 
-- iris data [maybe use this earlier?]
 - parenting data [from TQMP tutorial]
 - diabetes data [from candisc vignette]
 - Neuro-Cog & Social-Cog [from TQMP tutorial]
@@ -41,5 +40,5 @@
 ## Model diagnostic plots
 
 - Multivariate outliers (heplots::cqplot)
-- Homogeneity of covariances (heplots::BoxM)
+- Homogeneity of covariances
 

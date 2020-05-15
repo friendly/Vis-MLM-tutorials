@@ -1,0 +1,58 @@
+---
+title: "Knitr tips"
+author: "Michael Friendly"
+date: "5/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This document records a few tips and tricks I've learned in using `knitr`, `pandoc` and other `R` tools
+for writing articles and other documents using R markdown.
+
+### YAML tips
+
+A basic requirement for an R markdown `.Rmd` file is a header in YAML format, essentially a list of
+tags and values used when formatting the document.  This is what I got when I first created this document
+in R Studio, using `File -> New File -> R markdown`, where my name had already been recorded.
+
+```
+---
+title: "Knitr tips"
+author: "Michael Friendly"
+date: "5/13/2020"
+output: html_document
+---
+```
+
+Now, this might be OK, but what if I want the date to be updated automatically for the current version?
+This is where the power of knitr and R combine to make this easier.  Just use an "`r expression`"
+in the `date:` field.
+
+```
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+```
+
+
+
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
