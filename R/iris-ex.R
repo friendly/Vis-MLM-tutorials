@@ -121,11 +121,17 @@ iris.can
 
 
 #-- assign colors and symbols corresponding to species
-col <- c("red", "brown", "green3")
+#col <- c("red", "brown", "green3")
 pch <- 15:17
 plot(iris.can, col=col, pch=pch, ellipse=TRUE, scale=6)
 
-heplot(iris.can)
+plot(iris.can, col=col, pch=15:17, rev.axes = c(TRUE, FALSE),
+     ellipse=TRUE, scale=8, var.lwd = 2, var.col = "black")
+
+
+heplot(iris.can, rev.axes = c(TRUE, FALSE), 
+       fill = TRUE, fill.alpha = 0.2,
+       scale = 30)
 
 # 1-dim plot
 iris.can1 <- candisc(iris.mod, data=iris, ndim=1)

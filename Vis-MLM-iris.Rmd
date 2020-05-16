@@ -253,7 +253,7 @@ But the overall size of the $\mat{H}$ ellipse relative to that of $\mat{E}$ is c
 as the $\mat{E}$ ellipse. This is analogous to an effect size index used in univariate models,
 e.g., $ES = (\bar{y}_1 - \bar{y}_2) / s$ in a two-group design.
 
-* The default used in `heplot` is what we call **significance* (or "evidence") scaling.
+* The default used in `heplot` is what we call **significance** (or "evidence") scaling.
 That is the relative size of the $\mat{H}$ ellipse is set so that in the full p-dimensional
 space of all $p$ response variables, the $\mat{H}$ ellipse will protrude somewhere
 outside the $\mat{E}$ ellipse *if and only if* the test for some effect is significant
@@ -343,9 +343,36 @@ pairs(iris.mod, hypotheses=hyp, hyp.labels=FALSE,
       fill=TRUE, fill.alpha=0.1)
 ```
 
-There is something entirely new shown here: for most pairs of variables, larger X in the means for a species goes with larger Y. This is true for all pairs except for those involving `Sepal.Width`.
+There is something entirely new shown here: for most pairs of variables, larger X in the means for a species goes with larger Y, and the group means are nearly perfectly correlated.
+This is true for all pairs except for those involving `Sepal.Width`, where the direction is reversed.
+
 
 ## Canonical views
+
+The `heplot()` `pairs.mlm() and `heplot3d()` functions provide 2D and 3D views of all effects in a MLM in **variable** space.
+
+
+```{r iris-can}
+# iris data
+iris.can <- candisc(iris.mod, data=iris)
+iris.can
+```
+
+Plot canonical discriminant scores in 2D space, with the data ellipses for each group:
+
+```{r iris-can-plot, w=8, h=4, out.width="75%", fig.align="center"}
+plot(iris.can, col=col, pch=15:17, rev.axes = c(TRUE, FALSE),
+     ellipse=TRUE, scale=4, 
+     var.lwd = 2, var.col = "black")
+```
+
+Show this as an HE plot in canonical discriminant space:
+
+```{r iris-can-heplot, w=8, h=4, out.width="75%", fig.align="center"}
+heplot(iris.can, rev.axes = c(TRUE, FALSE), 
+       fill = TRUE, fill.alpha = 0.2,
+       scale = 30)
+```
 
 
 ## References
