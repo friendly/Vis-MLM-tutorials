@@ -209,9 +209,11 @@ visual attention on the important aspects:
 * the residual variability **within** groups (summarized in a $\mat{E}$ ellipse)
 
 To illustrate this, the figure below shows a scatterplot of the data for the relationship
-between sepal width and sepal length next to the analogous HE plot.
+between sepal width and sepal length next to the analogous HE plot. We can show these
+views for (a) pairs of variables, (b) all pairs, in a scatterplot matrix format, or
+(c) in a low-D "canonical" view showing the dimensions that most discriminate among the groups.
 
-```{r, fig.show='hold', h=7, w=7,  out.width="50%"}
+```{r he1, fig.show='hold', h=7, w=7,  out.width="50%"}
 # (a) Scatterplot with data ellipses
 car::scatterplot(Sepal.Width ~ Sepal.Length | Species, data=iris,
                  smooth=FALSE, regLine=FALSE,
@@ -227,13 +229,15 @@ heplot(iris.mod, fill=c(TRUE, FALSE))
 
 In the HE plot at the right,
 
-* the differences between species means are shown by what we call the $\mat{H}$ ellipsoid, the data ellipsoid
+* the differences **between** species means are shown by what we call the $\mat{H}$ ellipsoid, the data ellipsoid
 of the fitted (predicted) values under the model.
 In 2D, with a two degree-of-freedom test, $\mat{H}$ has two dimensions
 and appears as a simple ellipse.
 
-* the variation within groups is reflected in the $\mat{E}$ ellipse, which is just 
-the pooled data ellipses of the groups, translated to the grand means. By default, the size of the ellipse is set to cover 68% of the observations in a bivariate normal sample, an analog of a $\bar{y} \pm 1 s$ univariate
+* the variation **within** species is reflected in the $\mat{E}$ ellipse, which is just 
+the pooled data ellipses of the groups, translated to the grand means, or equivalently,
+the data ellipse of the residuals.
+By default, the size of the ellipse is set to cover 68% of the observations in a bivariate normal sample, an analog of a $\bar{y} \pm 1 s$ univariate
 interval. With this 68% interval, you can "read" the residual standard deviation as the half-length of the shadow of the $\mat{E}$ ellipse on any axis.
 Translating this ellipse to the grand means allows us to show the group centroids on the same scale,
 facilitating interpretation.
@@ -244,11 +248,104 @@ The orientation of the $\mat{H}$ ellipse reflects the negative correlation of th
 in general species with larger sepal length have smaller sepal width. 
 
 But the overall size of the $\mat{H}$ ellipse relative to that of $\mat{E}$ is crucial:
-The default used in `heplot` is what we call "significance" or "evidence" scaling.
+
+* One simple choice, **effect size** scaling, uses $\mat{H}/df_e$ to put this on the same scale
+as the $\mat{E}$ ellipse. This is analogous to an effect size index used in univariate models,
+e.g., $ES = (\bar{y}_1 - \bar{y}_2) / s$ in a two-group design.
+
+* The default used in `heplot` is what we call **significance* (or "evidence") scaling.
 That is the relative size of the $\mat{H}$ ellipse is set so that in the full p-dimensional
 space of all $p$ response variables, the $\mat{H}$ ellipse will protrude somewhere
 outside the $\mat{E}$ ellipse *if and only if* the test for some effect is significant
-at a prescribed $\alpha$-level (0.05 by default). 
+(by Roy's largest root test)
+at a prescribed $\alpha$-level (0.05 by default). This scaling uses $\mat{H}/\lambda_\alpha \: df_e$,
+where $\lambda_\alpha$ is the critical $\alpha$ value of Roy's test statistic.
+
+The plots below compare the two scalings using the same (x, y) limits in both plots.  
+Considering the relative areas of the ellipses, a verbal interpretation might be:
+
+* The differences among the iris species in this view are overwhelmingly significant, and the greatest differences are between the setosa flower and the others.
+
+* to a rough approximation, the effect size visually is ~ 1.0.  Differences between groups on average
+are about the same size as the within group standard deviation projected on any axis. In conventional
+terms (e.g., Cohen's $d$), this is considered a large effect.
+
+```{r he2, fig.show='hold', h=7, w=7,  out.width="50%"}
+# (a) Significance scaling 
+op <- par(mar=c(4,4,1,1)+0.1)
+res <- heplot(iris.mod, 
+              fill=TRUE, fill.alpha=c(0.3, 0.1), 
+              cex=1.25, cex.lab=1.5)
+label <- expression(paste("Significance scaling:", H / lambda[alpha], df[e]))
+text(7.5, 4.5, label, cex=1.5)
+
+# (b) Effect size scaling 
+heplot(iris.mod, size="effect", 
+       fill=TRUE, fill.alpha=c(0.3, 0.1), 
+       cex=1.25, cex.lab=1.5,
+	     xlim=res$xlim, ylim=res$ylim)
+label <- expression(paste("Effect size scaling:", H / df[e]))
+text(7.5, 4.5, label, cex=1.5)
+par(op)
+```
+
+### Showing contrasts
+
+One lovely virtue of the standard linear model fit with `lm()` is that any ANOVA effect
+of $df_h >= 2$ degrees of freedom can be partitioned into $df_h >= 2$ separate 1 df
+tests of "linear hypotheses" using orthogonal contrasts.  
+
+This is lovely both mathematically and visually.
+Each contrast $i$ corresponds to a rank 1 $\mat{H}_i$ matrix which additively decompose
+the overall rank $df_h$ hypothesis SSP $\mat{H}$ matrix as:
+
+\begin{equation*}
+\mat{H} = \mat{H}_1 + \mat{H}_2 + \cdots + \mat{H}_{\textrm{df}_h}
+\comma
+\end{equation*}
+\noindent exactly as the univariate $SS_H$ may be decomposed in an ANOVA.  Each of these rank 1 $\mat{H}_i$ matrices
+will plot as a degenerate ellipse--- a _line_
+in an HE plot. Their collection provides a visual summary of the overall
+test, as partitioned by these orthogonal contrasts, but more importantly, an "explanation"
+for the overall test in terms of answers to $\textrm{df}_h$ independent questions.
+
+
+```{r contrasts}
+# HE plots: testing linear hypotheses for contrasts
+C <- matrix(c(0, -1, 1,   
+              2, -1, -1), nrow=3, ncol=2)
+contrasts(iris$Species) <- C
+contrasts(iris$Species)
+
+iris.mod <- lm(cbind(Sepal.Length, Sepal.Width, Petal.Length, Petal.Width) ~
+               Species, data=iris)
+```
+
+In the `heplots` package, contrasts are specified as a list of tests evaluated by
+`car::linearHypothesis`. 
+
+```{r he-hyp, h=7, w=7,  out.width="50%"}
+# add tests for contrasts
+hyp <- list("V:V"="Species1","S:VV"="Species2")
+heplot(iris.mod, hypotheses=hyp)
+```
+
+
+### Scatterplot matrix view
+
+A `pairs()` plot for an `mlm` object invokes the `pairs.mlm()` function which constructs
+a matrix of pairwise HE plots for a multivariate linear model. You can think of this as
+a high-level summary of the multivariate response variables, showing the contributions
+of all model terms to multivariate tests.
+
+```{r he-pairs, h=8, w=8, out.width="70%"}
+pairs(iris.mod, hypotheses=hyp, hyp.labels=FALSE,
+      fill=TRUE, fill.alpha=0.1)
+```
+
+There is something entirely new shown here: for most pairs of variables, larger X in the means for a species goes with larger Y. This is true for all pairs except for those involving `Sepal.Width`.
+
+## Canonical views
 
 
 ## References
