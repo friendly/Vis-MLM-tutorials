@@ -115,7 +115,7 @@ include_graphics(c("fig/iris-setosa.jpg",
 
 ### Exploratory plots
 
-For such a dataset, perhaps the easiest thing to do is to do univariate plots (boxplots),
+For such a dataset, perhaps the easiest thing to do is to prepare univariate plots (boxplots),
 bivariate plots (scatterplot matrix) and analyses
 (anova) for each response variable separately.  This gives some information, but usually
 not comprehensive enough to understand the multivariate response variables: how they are
@@ -178,7 +178,9 @@ scatterplotMatrix(~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width | Sp
 ```
 The data ellipses show something new: The bivariate scatter --- variances and covariances
 (correlations) also differ among species.  Generally, the variances of Setosa are smaller than the other two
-species, and the within-group correlations seem different for Setosa.
+species, and the within-group correlations seem different for Setosa. 
+This is a topic we explore elsewhere [@FriendlySigal:2018:eqcov], in visualization methods
+for the assumption of homogeneity of covariances in MANOVA models.
 
 ## MANOVA
 
@@ -292,7 +294,7 @@ par(op)
 ### Showing contrasts
 
 One lovely virtue of the standard linear model fit with `lm()` is that any ANOVA effect
-of $df_h >= 2$ degrees of freedom can be partitioned into $df_h$ separate 1 df
+of $df_h \ge 2$ degrees of freedom can be partitioned into $df_h$ separate 1 df
 tests of "linear hypotheses" using orthogonal contrasts.  
 
 This is lovely both mathematically and visually.
