@@ -396,10 +396,15 @@ It is most associated with Sepal.Width but this variable goes in the opposite
 direction on Can1 from the other three.
 
 Because this canonical structure is essentially one-dimensional, a 1D version
-might be a sufficient visual summary:
+might be a sufficient visual summary. In this case, `plot.candisc()` 
+using `which=1` displays boxplots for the Can1 scores together with
+the structure coefficients (correlations) of the size variables with
+this dimension.
 
 ```{r iris-can-plo1, w=8, h=6, out.width="75%", fig.align="center"}
-plot(iris.can, which=1, points.1d=TRUE)
+plot(iris.can, which=1, 
+     points.1d=TRUE, pch=15:17, rev.axes = TRUE,
+     var.lwd = 2, var.col = "black")
 ```
 
 Finally, in cases where there are more groups and/or more response variables,
@@ -411,6 +416,14 @@ heplot(iris.can, rev.axes = c(TRUE, FALSE),
        fill = TRUE, fill.alpha = 0.2,
        scale = 30)
 ```
+
+## Conclusion
+
+Graphical methods for univariate linear models are relatively well-developed.  
+This article illustrates a number of extensions of these methods to the
+case of multivariate responses in a simple one-way MANOVA design.
+The HE plot framework illustrated here provides new methods for graphical
+insight into multivariate data in the context of linear models.
 
 
 ## References

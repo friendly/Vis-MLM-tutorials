@@ -138,7 +138,7 @@ heplot(iris.can, rev.axes = c(TRUE, FALSE),
 # plot(iris.can1)
 
 # or
-plot(iris.can, which=1, points.1d=TRUE, rev.axis=TRUE)
+plot(iris.can, which=1, points.1d=TRUE, pch=15:17, rev.axes=TRUE)
 plot(iris.can, which=2, points.1d=TRUE)
 plot(iris.can, which=3, points.1d=TRUE)
 
