@@ -134,11 +134,11 @@ heplot(iris.can, rev.axes = c(TRUE, FALSE),
        scale = 30)
 
 # 1-dim plot
-iris.can1 <- candisc(iris.mod, data=iris, ndim=1)
-plot(iris.can1)
+# iris.can1 <- candisc(iris.mod, data=iris, ndim=1)
+# plot(iris.can1)
 
 # or
-plot(iris.can, which=1, points.1d=TRUE)
+plot(iris.can, which=1, points.1d=TRUE, rev.axis=TRUE)
 plot(iris.can, which=2, points.1d=TRUE)
 plot(iris.can, which=3, points.1d=TRUE)
 

@@ -292,7 +292,7 @@ par(op)
 ### Showing contrasts
 
 One lovely virtue of the standard linear model fit with `lm()` is that any ANOVA effect
-of $df_h >= 2$ degrees of freedom can be partitioned into $df_h >= 2$ separate 1 df
+of $df_h >= 2$ degrees of freedom can be partitioned into $df_h$ separate 1 df
 tests of "linear hypotheses" using orthogonal contrasts.  
 
 This is lovely both mathematically and visually.
@@ -309,7 +309,10 @@ in an HE plot. Their collection provides a visual summary of the overall
 test, as partitioned by these orthogonal contrasts, but more importantly, an "explanation"
 for the overall test in terms of answers to $\textrm{df}_h$ independent questions.
 
-
+Here, we choose one contrast comparing Versicolor to Virginca, and a second (orthogonal)
+contrast comparing Setosa to the average of the other two species.
+Contrasts are assigned to a factor using the `contrasts()` function on the left-hand side
+of an assignment
 ```{r contrasts}
 # HE plots: testing linear hypotheses for contrasts
 C <- matrix(c(0, -1, 1,   
@@ -322,14 +325,20 @@ iris.mod <- lm(cbind(Sepal.Length, Sepal.Width, Petal.Length, Petal.Width) ~
 ```
 
 In the `heplots` package, contrasts are specified as a list of tests evaluated by
-`car::linearHypothesis`. 
+`car::linearHypothesis`. Each of these generate an $\mat{H}$ matrix of rank 1, so these
+will appear as lines in an HE plot.
 
-```{r he-hyp, h=7, w=7,  out.width="50%"}
+```{r he-hyp, h=7, w=7, out.width="50%", fig.align="center"}
 # add tests for contrasts
 hyp <- list("V:V"="Species1","S:VV"="Species2")
 heplot(iris.mod, hypotheses=hyp)
 ```
 
+When the contrasts are orthogonal (as here), the corresponding **H** lines form
+_conjugate axes_ of the **H** ellipse for the overall species effect. Their relative
+sizes show the portion of the overall effect they account for.
+So here, the largest portion is attributable to the difference of Setosa from the other two
+species.
 
 ### Scatterplot matrix view
 
@@ -349,7 +358,16 @@ This is true for all pairs except for those involving `Sepal.Width`, where the d
 
 ## Canonical views
 
-The `heplot()` `pairs.mlm() and `heplot3d()` functions provide 2D and 3D views of all effects in a MLM in **variable** space.
+The `heplot()`, `pairs.mlm()`, and `heplot3d()` functions provide 2D and 3D views of all effects in a MLM in **variable** space. Alternatively, canonical discriminant analysis (CDA) provides a low-D visualization of between-group variation and vectors reflecting the weights of the response variables on these dimensions in **canonical space**. 
+
+You can imagine this as rotating the 4D space of all four size variables,
+and projecting the observations on the plane that shows the largest variation in the species means.
+This is analogous to a biplot often used in conjunction with a principal
+component analysis.
+
+The printed output of the result of `candisc()` shows that over
+99% of the between-species mean differences can be accounted for by one linear combination
+of the size variables.
 
 
 ```{r iris-can}
@@ -358,15 +376,33 @@ iris.can <- candisc(iris.mod, data=iris)
 iris.can
 ```
 
-Plot canonical discriminant scores in 2D space, with the data ellipses for each group:
+The `plot()` method for `candisc` objects plots the
+canonical discriminant scores in 2D space, with the data ellipses for each group. The variable
+vectors reflect the correlations of each size variable with the two canonical dimensions.
 
 ```{r iris-can-plot, w=8, h=4, out.width="75%", fig.align="center"}
 plot(iris.can, col=col, pch=15:17, rev.axes = c(TRUE, FALSE),
      ellipse=TRUE, scale=4, 
      var.lwd = 2, var.col = "black")
 ```
+The interpretation here is quite simple: the first canonical dimension (Can1),
+accounting for 99.1% of mean differences,
+largely reflects the overall size of each iris flower.
+The second dimension (Can2) is statistically significant, though practically
+unimportant, as it accounts for only 0.9% of mean differences.
+It is most associated with Sepal.Width but this variable goes in the opposite
+direction on Can1 from the other three.
 
-Show this as an HE plot in canonical discriminant space:
+Because this canonical structure is essentially one-dimensional, a 1D version
+might be a sufficient visual summary:
+
+```{r iris-can-plo1, w=8, h=6, out.width="75%", fig.align="center"}
+plot(iris.can, which=1, points.1d=TRUE)
+```
+
+Finally, in cases where there are more groups and/or more response variables,
+an HE plot in canonical discriminant space is a useful and compact visual
+summary.  This is provided by the `heplot` method for `candisc` objects.
 
 ```{r iris-can-heplot, w=8, h=4, out.width="75%", fig.align="center"}
 heplot(iris.can, rev.axes = c(TRUE, FALSE), 
