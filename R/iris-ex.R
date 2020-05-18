@@ -42,7 +42,7 @@ iris_long <- iris %>%
  
 ggplot(iris_long, aes(x=Species, y=Size, fill=Species)) +
   geom_boxplot() + 
-  facet_grid(. ~ Measure, scales="free_y")
+  facet_wrap(. ~ Measure, scales="free_y", nrow=1)
 
 
 ## scatterplot matrix

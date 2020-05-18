@@ -136,7 +136,7 @@ We use the `car::Boxplot` function to show the distributions of the iris size me
 panel for each measure.  All the measures are in cm., but it is more useful to see them plotted on
 separate scales to compare the specied on each size variable. From this, we can see that the means for the species
 are ordered, `setosa < versicolor < virginica` on all variables except for `Sepal.Width`.
-```{r boxplots, w=12, h=4, out.width="100%", collapse=TRUE}
+```{r boxplots, w=12, h=4, out.width="100%", fig.show='hold', collapse=TRUE}
 op <- par(mfrow=c(1, 4))
 for (response in names(iris)[1:4]){
   Boxplot(iris[, response] ~ Species, data=iris,
@@ -177,7 +177,7 @@ scatterplotMatrix(~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width | Sp
 
 ```
 The data ellipses show something new: The bivariate scatter --- variances and covariances
-(correlations) also differ among species.  Generally, the variances of Setosa are smaller than the other two
+(correlations) --- also differ among species.  Generally, the variances of Setosa are smaller than the other two
 species, and the within-group correlations seem different for Setosa. 
 This is a topic we explore elsewhere [@FriendlySigal:2018:eqcov], in visualization methods
 for the assumption of homogeneity of covariances in MANOVA models.
@@ -263,7 +263,7 @@ outside the $\mat{E}$ ellipse *if and only if* the test for some effect is signi
 at a prescribed $\alpha$-level (0.05 by default). This scaling uses $\mat{H}/\lambda_\alpha \: df_e$,
 where $\lambda_\alpha$ is the critical $\alpha$ value of Roy's test statistic.
 
-The plots below compare the two scalings using the same (x, y) limits in both plots.  
+The plots below compare the two scalings using the same (x, y) limits in both plots.
 Considering the relative areas of the ellipses, a verbal interpretation might be:
 
 * The differences among the iris species in this view are overwhelmingly significant, and the greatest differences are between the setosa flower and the others.
@@ -340,7 +340,8 @@ When the contrasts are orthogonal (as here), the corresponding **H** lines form
 _conjugate axes_ of the **H** ellipse for the overall species effect. Their relative
 sizes show the portion of the overall effect they account for.
 So here, the largest portion is attributable to the difference of Setosa from the other two
-species.
+species. Many more details of connections between geometry of ellipses and statistics
+are described by @Friendly-etal:ellipses:2013.
 
 ### Scatterplot matrix view
 
@@ -406,6 +407,11 @@ plot(iris.can, which=1,
      points.1d=TRUE, pch=15:17, rev.axes = TRUE,
      var.lwd = 2, var.col = "black")
 ```
+This focuses attention on the main story here: The iris species differ mainly in overall size,
+and Sepal.Length and the two petal variables are correlated positively with this, while
+Sepal.Width has a negative correlation
+
+### Canonical HE plots 
 
 Finally, in cases where there are more groups and/or more response variables,
 an HE plot in canonical discriminant space is a useful and compact visual
@@ -419,7 +425,7 @@ heplot(iris.can, rev.axes = c(TRUE, FALSE),
 
 ## Conclusion
 
-Graphical methods for univariate linear models are relatively well-developed.  
+Graphical methods for univariate linear models are relatively well-developed and widely used, but copmparable methods for multivariate response models are relatively recent,
 This article illustrates a number of extensions of these methods to the
 case of multivariate responses in a simple one-way MANOVA design.
 The HE plot framework illustrated here provides new methods for graphical
